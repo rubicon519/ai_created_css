@@ -168,11 +168,11 @@
 
   /* 1번 포지션 */
   .slide.prev2 {
-    width: 22vw;                  /* ★ 가로: 3번과 동일 */
-    height: 26.53vw;              /* ★ 382px → 26.53vw */
+    width: 22vw;
+    height: 28vw;                 /* ★ 26.53vw → 28vw */
     left: calc(50% - 11vw);
-    top:  calc(50% - 13.26vw);   /* 26.53vw / 2 */
-    transform: translateX(-48.5vw) translateZ(-2.08vw) rotateY(38deg); /* 30px → 2.08vw */
+    top:  calc(50% - 14vw);      /* 28vw / 2 = 14vw */
+    transform: translateX(-49vw) translateZ(-2.08vw) rotateY(38deg); /* 30px → 2.08vw */
     opacity: 0.85;
     filter: brightness(0.78);
     z-index: 3;
@@ -181,10 +181,10 @@
   /* 5번 포지션 */
   .slide.next2 {
     width: 22vw;
-    height: 26.53vw;
+    height: 28vw;                 /* ★ 26.53vw → 28vw */
     left: calc(50% - 11vw);
-    top:  calc(50% - 13.26vw);
-    transform: translateX(48.5vw) translateZ(-2.08vw) rotateY(-38deg);
+    top:  calc(50% - 14vw);      /* 28vw / 2 = 14vw */
+    transform: translateX(49vw) translateZ(-2.08vw) rotateY(-38deg);
     opacity: 0.85;
     filter: brightness(0.78);
     z-index: 3;
@@ -193,9 +193,9 @@
   /* 0번 — 왼쪽 화면 밖 대기 */
   .slide.prev3 {
     width: 22vw;
-    height: 26.53vw;
+    height: 28vw;
     left: calc(50% - 11vw);
-    top:  calc(50% - 13.26vw);
+    top:  calc(50% - 14vw);
     transform: translateX(-91vw) translateZ(-2.08vw) rotateY(38deg);
     opacity: 0;
     filter: brightness(0.78);
@@ -206,9 +206,9 @@
   /* 6번 — 오른쪽 화면 밖 대기 */
   .slide.next3 {
     width: 22vw;
-    height: 26.53vw;
+    height: 28vw;
     left: calc(50% - 11vw);
-    top:  calc(50% - 13.26vw);
+    top:  calc(50% - 14vw);
     transform: translateX(91vw) translateZ(-2.08vw) rotateY(-38deg);
     opacity: 0;
     filter: brightness(0.78);
