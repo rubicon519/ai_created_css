@@ -143,7 +143,7 @@
        │ 포지션   │ 크기        │ rotateY  │ translateX               │
        ├──────────┼─────────────┼──────────┼──────────────────────────┤
        │ active   │ 300 × 300px │ 0deg     │ 0 (중앙)                 │
-       │ prev/next│ 318 × 318px │ ±8deg    │ ±312px                   │
+       │ prev/next│ 318 × 318px │ ±17deg   │ ±312px                   │
        │ prev2/   │ 366 × 366px │ ±22deg   │ ±624px                   │
        │ next2    │             │          │                           │
        │ prev3/   │ 366 × 366px │ ±22deg   │ ±936px (화면 밖, 투명)   │
@@ -151,7 +151,7 @@
        └──────────┴─────────────┴──────────┴──────────────────────────┘
 
      크기 보정 계산:
-       rotateY(8deg)  → cos(8°)  ≈ 0.990 → 보정 배율 약 1.06 → 318px
+       rotateY(17deg) → cos(17°) ≈ 0.956 → 보정 배율 약 1.06 → 318px
        rotateY(22deg) → cos(22°) ≈ 0.927 → 보정 배율 약 1.22 → 366px
        → 기울기가 클수록 더 크게 만들어야 상하 높이가 맞아 보임
 
@@ -163,105 +163,98 @@
 
   /* 3번 포지션 — 정면 중앙, 기준 크기 */
   .slide.active {
-    width: 300px; height: 300px;          /* ★ 기준 크기 */
-    left: calc(50% - 150px);             /* 300 / 2 = 150 */
-    top:  calc(50% - 150px);
-    transform: translateX(0px) translateZ(0px) rotateY(0deg); /* ★ 기울기 없음 */
+    width: clamp(200px, 22vw, 320px);    /* ★ 가로: vw 기준 반응형 */
+    height: 300px;                        /* ★ 세로: 고정 */
+    left: calc(50% - 11vw);              /* 가로의 절반 */
+    top:  calc(50% - 150px);             /* 세로의 절반 */
+    transform: translateX(0px) translateZ(0px) rotateY(0deg);
     opacity: 1;
-    filter: brightness(1);               /* 가장 밝음 */
+    filter: brightness(1);
     z-index: 5;
   }
 
-  /* 2번 포지션 — 왼쪽 첫 번째
-     ★ 크기: 318px (active 300px 대비 +6% 보정)
-     ★ 기울기: rotateY(8deg) — 오른쪽으로 살짝 기울어짐
-     ★ 이동: translateX(-312px) — 중앙에서 왼쪽으로 */
+  /* 2번 포지션 */
   .slide.prev {
-    width: 318px; height: 318px;          /* ★ active보다 18px 크게 */
-    left: calc(50% - 159px);             /* 318 / 2 = 159 */
-    top:  calc(50% - 159px);
-    transform: translateX(-312px) translateZ(0px) rotateY(8deg); /* ★ 8도 기울기 */
-    opacity: 1;
-    filter: brightness(0.92);            /* 살짝 어둡게 */
-    z-index: 4;
-  }
-
-  /* 4번 포지션 — 오른쪽 첫 번째 (prev의 좌우 대칭) */
-  .slide.next {
-    width: 318px; height: 318px;          /* ★ active보다 18px 크게 */
-    left: calc(50% - 159px);
-    top:  calc(50% - 159px);
-    transform: translateX(312px) translateZ(0px) rotateY(-8deg); /* ★ -8도 (반대 방향) */
+    width: clamp(200px, 22vw, 320px);    /* ★ 가로: 3번과 동일 */
+    height: 318px;                        /* ★ 세로: 유지 */
+    left: calc(50% - 11vw);
+    top:  calc(50% - 159px);             /* 318 / 2 = 159 */
+    transform: translateX(-22.5vw) translateZ(0px) rotateY(21deg);
     opacity: 1;
     filter: brightness(0.92);
     z-index: 4;
   }
 
-  /* 1번 포지션 — 왼쪽 두 번째
-     ★ 크기: 366px (active 300px 대비 +22% 보정)
-     ★ 기울기: rotateY(22deg) — 더 강하게 기울어져 거의 옆면이 보임
-     ★ translateZ(-30px): 살짝 뒤로 물러나 원근감 강조
-     ★ opacity 0.85: 화면 가장자리라 약간 투명 */
+  /* 4번 포지션 */
+  .slide.next {
+    width: clamp(200px, 22vw, 320px);    /* ★ 가로: 3번과 동일 */
+    height: 318px;                        /* ★ 세로: 유지 */
+    left: calc(50% - 11vw);
+    top:  calc(50% - 159px);
+    transform: translateX(22.5vw) translateZ(0px) rotateY(-21deg);
+    opacity: 1;
+    filter: brightness(0.92);
+    z-index: 4;
+  }
+
+  /* 1번 포지션 */
   .slide.prev2 {
-    width: 366px; height: 366px;          /* ★ active보다 66px 크게 */
-    left: calc(50% - 183px);             /* 366 / 2 = 183 */
-    top:  calc(50% - 183px);
-    transform: translateX(-624px) translateZ(-30px) rotateY(22deg); /* ★ 22도 기울기 */
+    width: clamp(200px, 22vw, 320px);    /* ★ 가로: 3번과 동일 */
+    height: 382px;                        /* ★ 세로: 유지 */
+    left: calc(50% - 11vw);
+    top:  calc(50% - 191px);             /* 382 / 2 = 191 */
+    transform: translateX(-48.5vw) translateZ(-30px) rotateY(38deg);
     opacity: 0.85;
-    filter: brightness(0.78);            /* 더 어둡게 */
+    filter: brightness(0.78);
     z-index: 3;
   }
 
-  /* 5번 포지션 — 오른쪽 두 번째 (prev2의 좌우 대칭) */
+  /* 5번 포지션 */
   .slide.next2 {
-    width: 366px; height: 366px;          /* ★ active보다 66px 크게 */
-    left: calc(50% - 183px);
-    top:  calc(50% - 183px);
-    transform: translateX(624px) translateZ(-30px) rotateY(-22deg); /* ★ -22도 */
+    width: clamp(200px, 22vw, 320px);    /* ★ 가로: 3번과 동일 */
+    height: 382px;                        /* ★ 세로: 유지 */
+    left: calc(50% - 11vw);
+    top:  calc(50% - 191px);             /* 382 / 2 = 191 */
+    transform: translateX(48.5vw) translateZ(-30px) rotateY(-38deg);
     opacity: 0.85;
     filter: brightness(0.78);
     z-index: 3;
   }
 
-  /* 0번 포지션 — 1번 왼쪽 화면 밖 대기
-     슬라이드 전환 시 prev2에서 이 위치로 나가거나
-     이 위치에서 prev2로 들어오며 자연스러운 진입/퇴장 구현
-     opacity: 0 으로 보이지 않지만 위치/기울기는 유지 */
   .slide.prev3 {
-    width: 366px; height: 366px;
-    left: calc(50% - 183px);
-    top:  calc(50% - 183px);
-    transform: translateX(-936px) translateZ(-30px) rotateY(22deg); /* ★ prev2와 동일 각도 */
-    opacity: 0;                          /* 화면 밖이므로 투명 */
-    filter: brightness(0.78);
-    pointer-events: none;
-    z-index: 2;
-  }
-
-  /* 6번 포지션 — 5번 오른쪽 화면 밖 대기 (prev3의 좌우 대칭) */
-  .slide.next3 {
-    width: 366px; height: 366px;
-    left: calc(50% - 183px);
-    top:  calc(50% - 183px);
-    transform: translateX(936px) translateZ(-30px) rotateY(-22deg); /* ★ next2와 동일 각도 */
+    width: clamp(200px, 22vw, 320px);
+    height: 382px;
+    left: calc(50% - 11vw);
+    top:  calc(50% - 191px);
+    transform: translateX(-91vw) translateZ(-30px) rotateY(38deg);
     opacity: 0;
     filter: brightness(0.78);
     pointer-events: none;
     z-index: 2;
   }
 
-  /* 완전 숨김 (화면에 표시되지 않는 나머지 카드)
-     transition: none — 화면을 가로질러 이동하는 현상 방지
-     JS에서 hidden으로 분류될 때 즉시 중앙으로 순간이동 */
+  .slide.next3 {
+    width: clamp(200px, 22vw, 320px);
+    height: 382px;
+    left: calc(50% - 11vw);
+    top:  calc(50% - 191px);
+    transform: translateX(91vw) translateZ(-30px) rotateY(-38deg);
+    opacity: 0;
+    filter: brightness(0.78);
+    pointer-events: none;
+    z-index: 2;
+  }
+
   .slide.hidden {
-    width: 366px; height: 366px;
-    left: calc(50% - 183px);
-    top:  calc(50% - 183px);
+    width: clamp(200px, 22vw, 320px);
+    height: 300px;
+    left: calc(50% - 11vw);
+    top:  calc(50% - 150px);
     opacity: 0;
     pointer-events: none;
     transform: translateX(0) translateZ(-200px) scale(0.7);
     z-index: 0;
-    transition: none; /* ★ 순간이동 — 애니메이션 없이 즉시 위치 변경 */
+    transition: none;
   }
 
   /* ============================================================
