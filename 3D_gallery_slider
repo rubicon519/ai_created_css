@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery Slider</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@300;400&display=swap');
+
+  /* ============================================================
+     기본 리셋 및 레이아웃
+  ============================================================ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #fff;
+    color: #2a2018;
+    font-family: 'Montserrat', sans-serif;
+    min-height: 100dvh;         /* dvh: 모바일 주소창 대응 동적 뷰포트 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-x: hidden;         /* 화면 밖 슬라이드 카드 가로 스크롤 방지 */
+    user-select: none;
+  }
+
+  /* ============================================================
+     상단 텍스트 헤더
+  ============================================================ */
+  .gallery-header {
+    text-align: center;
+    padding-top: clamp(40px, 7vh, 80px); /* 화면 높이에 따라 유동적 상단 여백 */
+    position: relative;
+    z-index: 10;
+  }
+  .gallery-label {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: #9a8c7a;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .gallery-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.8rem, 3.8vw, 3rem); /* 최소 1.8rem ~ 최대 3rem, 뷰포트 너비 기준 */
+    font-weight: 400;
+    line-height: 1.3;
+    color: #2a1f10;
+    max-width: 600px;
+  }
+
+  /* ============================================================
+     네비게이션 버튼 (텍스트 바로 아래 중앙 배치)
+  ============================================================ */
+  .nav-buttons {
+    display: flex;
+    gap: 6px;
+    margin-top: 20px;
+    justify-content: center;
+    position: relative;
+    z-index: 10;
+  }
+  .nav-btn {
+    width: 38px; height: 34px;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #666;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+    border-radius: 2px;
+  }
+  .nav-btn:hover { background: #f7f4f0; border-color: #bbb; }
+
+  /* ============================================================
+     슬라이더 씬 (3D 원근감 컨테이너)
+
+     perspective: 보는 사람의 눈 거리. 값이 작을수록 원근 왜곡 강함
+     perspective-origin: 소실점 위치. 50% 50% = 정중앙 기준
+     overflow: visible — 양옆 카드가 화면 밖으로 나가도 보이도록
+  ============================================================ */
+  .slider-wrap {
+    margin-top: 24px;
+    position: relative;
+    width: 100vw;
+    height: 390px;
+    overflow: visible;
+    perspective: 900px;
+    perspective-origin: 50% 50%;
+  }
+
+  /* 3D 공간을 유지하는 무대. 자식 요소들이 이 공간 안에서 3D 변환됨 */
+  .slider-stage {
+    position: absolute;
+    width: 100vw;
+    height: 100%;
+    transform-style: preserve-3d; /* 자식 요소들의 3D 위치 유지 */
+    overflow: visible;
+  }
+
+  /* ============================================================
+     슬라이드 카드 공통 스타일
+
+     ★ transition 설명:
+       - transform : translateX(이동) + rotateY(기울기) 동시에 부드럽게 전환
+       - width/height: 카드 크기가 포지션에 따라 다르므로 함께 전환
+       - left/top   : 크기가 바뀌면 중앙 정렬 보정값도 바뀌므로 함께 전환
+       - opacity    : 화면 밖 카드 페이드
+       - filter     : 밝기 변화
+
+     위 6가지가 모두 0.75s 동일 타이밍으로 움직여야
+     기울기·크기·위치·밝기가 자연스럽게 연동됨
+  ============================================================ */
+  .slide {
+    position: absolute;
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: pointer;
+    transition:
+      transform 0.75s cubic-bezier(0.22, 0.61, 0.36, 1), /* 이동 + 기울기 */
+      opacity   0.75s ease,                               /* 투명도 */
+      filter    0.75s ease,                               /* 밝기 */
+      width     0.75s cubic-bezier(0.22, 0.61, 0.36, 1), /* ★ 카드 너비 */
+      height    0.75s cubic-bezier(0.22, 0.61, 0.36, 1), /* ★ 카드 높이 */
+      left      0.75s cubic-bezier(0.22, 0.61, 0.36, 1), /* ★ 중앙 정렬 보정 X */
+      top       0.75s cubic-bezier(0.22, 0.61, 0.36, 1); /* ★ 중앙 정렬 보정 Y */
+    transform-style: preserve-3d;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  }
+
+  /* ============================================================
+     ★★★ 포지션별 카드 크기 & 기울기 ★★★
+
+     핵심 설계 원칙:
+       rotateY로 기울면 원근감으로 카드가 작아 보임
+       → 바깥 포지션일수록 실제 크기(width/height)를 키워서 보정
+       → 결과적으로 상단/하단 윤곽선이 원의 호를 그리는 효과
+
+     포지션별 크기 & 각도 요약:
+       ┌──────────┬─────────────┬──────────┬──────────────────────────┐
+       │ 포지션   │ 크기        │ rotateY  │ translateX               │
+       ├──────────┼─────────────┼──────────┼──────────────────────────┤
+       │ active   │ 300 × 300px │ 0deg     │ 0 (중앙)                 │
+       │ prev/next│ 318 × 318px │ ±8deg    │ ±312px                   │
+       │ prev2/   │ 366 × 366px │ ±22deg   │ ±624px                   │
+       │ next2    │             │          │                           │
+       │ prev3/   │ 366 × 366px │ ±22deg   │ ±936px (화면 밖, 투명)   │
+       │ next3    │             │          │                           │
+       └──────────┴─────────────┴──────────┴──────────────────────────┘
+
+     크기 보정 계산:
+       rotateY(8deg)  → cos(8°)  ≈ 0.990 → 보정 배율 약 1.06 → 318px
+       rotateY(22deg) → cos(22°) ≈ 0.927 → 보정 배율 약 1.22 → 366px
+       → 기울기가 클수록 더 크게 만들어야 상하 높이가 맞아 보임
+
+     left/top 계산:
+       카드를 수평/수직 중앙 정렬하려면
+       left = 50% - (카드너비 / 2)
+       top  = 50% - (카드높이 / 2)
+  ============================================================ */
+
+  /* 3번 포지션 — 정면 중앙, 기준 크기 */
+  .slide.active {
+    width: 300px; height: 300px;          /* ★ 기준 크기 */
+    left: calc(50% - 150px);             /* 300 / 2 = 150 */
+    top:  calc(50% - 150px);
+    transform: translateX(0px) translateZ(0px) rotateY(0deg); /* ★ 기울기 없음 */
+    opacity: 1;
+    filter: brightness(1);               /* 가장 밝음 */
+    z-index: 5;
+  }
+
+  /* 2번 포지션 — 왼쪽 첫 번째
+     ★ 크기: 318px (active 300px 대비 +6% 보정)
+     ★ 기울기: rotateY(8deg) — 오른쪽으로 살짝 기울어짐
+     ★ 이동: translateX(-312px) — 중앙에서 왼쪽으로 */
+  .slide.prev {
+    width: 318px; height: 318px;          /* ★ active보다 18px 크게 */
+    left: calc(50% - 159px);             /* 318 / 2 = 159 */
+    top:  calc(50% - 159px);
+    transform: translateX(-312px) translateZ(0px) rotateY(8deg); /* ★ 8도 기울기 */
+    opacity: 1;
+    filter: brightness(0.92);            /* 살짝 어둡게 */
+    z-index: 4;
+  }
+
+  /* 4번 포지션 — 오른쪽 첫 번째 (prev의 좌우 대칭) */
+  .slide.next {
+    width: 318px; height: 318px;          /* ★ active보다 18px 크게 */
+    left: calc(50% - 159px);
+    top:  calc(50% - 159px);
+    transform: translateX(312px) translateZ(0px) rotateY(-8deg); /* ★ -8도 (반대 방향) */
+    opacity: 1;
+    filter: brightness(0.92);
+    z-index: 4;
+  }
+
+  /* 1번 포지션 — 왼쪽 두 번째
+     ★ 크기: 366px (active 300px 대비 +22% 보정)
+     ★ 기울기: rotateY(22deg) — 더 강하게 기울어져 거의 옆면이 보임
+     ★ translateZ(-30px): 살짝 뒤로 물러나 원근감 강조
+     ★ opacity 0.85: 화면 가장자리라 약간 투명 */
+  .slide.prev2 {
+    width: 366px; height: 366px;          /* ★ active보다 66px 크게 */
+    left: calc(50% - 183px);             /* 366 / 2 = 183 */
+    top:  calc(50% - 183px);
+    transform: translateX(-624px) translateZ(-30px) rotateY(22deg); /* ★ 22도 기울기 */
+    opacity: 0.85;
+    filter: brightness(0.78);            /* 더 어둡게 */
+    z-index: 3;
+  }
+
+  /* 5번 포지션 — 오른쪽 두 번째 (prev2의 좌우 대칭) */
+  .slide.next2 {
+    width: 366px; height: 366px;          /* ★ active보다 66px 크게 */
+    left: calc(50% - 183px);
+    top:  calc(50% - 183px);
+    transform: translateX(624px) translateZ(-30px) rotateY(-22deg); /* ★ -22도 */
+    opacity: 0.85;
+    filter: brightness(0.78);
+    z-index: 3;
+  }
+
+  /* 0번 포지션 — 1번 왼쪽 화면 밖 대기
+     슬라이드 전환 시 prev2에서 이 위치로 나가거나
+     이 위치에서 prev2로 들어오며 자연스러운 진입/퇴장 구현
+     opacity: 0 으로 보이지 않지만 위치/기울기는 유지 */
+  .slide.prev3 {
+    width: 366px; height: 366px;
+    left: calc(50% - 183px);
+    top:  calc(50% - 183px);
+    transform: translateX(-936px) translateZ(-30px) rotateY(22deg); /* ★ prev2와 동일 각도 */
+    opacity: 0;                          /* 화면 밖이므로 투명 */
+    filter: brightness(0.78);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* 6번 포지션 — 5번 오른쪽 화면 밖 대기 (prev3의 좌우 대칭) */
+  .slide.next3 {
+    width: 366px; height: 366px;
+    left: calc(50% - 183px);
+    top:  calc(50% - 183px);
+    transform: translateX(936px) translateZ(-30px) rotateY(-22deg); /* ★ next2와 동일 각도 */
+    opacity: 0;
+    filter: brightness(0.78);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* 완전 숨김 (화면에 표시되지 않는 나머지 카드)
+     transition: none — 화면을 가로질러 이동하는 현상 방지
+     JS에서 hidden으로 분류될 때 즉시 중앙으로 순간이동 */
+  .slide.hidden {
+    width: 366px; height: 366px;
+    left: calc(50% - 183px);
+    top:  calc(50% - 183px);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(0) translateZ(-200px) scale(0.7);
+    z-index: 0;
+    transition: none; /* ★ 순간이동 — 애니메이션 없이 즉시 위치 변경 */
+  }
+
+  /* ============================================================
+     카드 내부 구성
+  ============================================================ */
+  /* 이미지/배경을 담는 컨테이너 */
+  .slide-inner {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+  /* 하단 그라디언트 오버레이 (텍스트 가독성용) */
+  .slide-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.22) 100%);
+    z-index: 2; pointer-events: none;
+  }
+
+  /* ============================================================
+     하단 도트 인디케이터
+  ============================================================ */
+  .dots-wrap {
+    margin-top: 20px;
+    display: flex; gap: 6px; justify-content: center;
+    position: relative; z-index: 10;
+  }
+  .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #ddd; cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  /* 현재 활성 도트: 가로로 늘어나는 효과 */
+  .dot.active { background: #8a7a65; width: 18px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="gallery-header">
+  <span class="gallery-label">About Resort</span>
+  <div class="gallery-title">Relaxing moments and<br>breathtaking views, captured for you.</div>
+</div>
+
+<div class="nav-buttons">
+  <button class="nav-btn" id="prevBtn">&#8249;</button>
+  <button class="nav-btn" id="nextBtn">&#8250;</button>
+</div>
+
+<div class="slider-wrap">
+  <div class="slider-stage" id="stage"></div>
+</div>
+
+<div class="dots-wrap" id="dots"></div>
+
+<script>
+  /* ============================================================
+     이미지 데이터
+     실제 사용 시 bg 대신 이미지 URL로 교체
+     예: { bg: "url('images/room1.jpg')" }
+  ============================================================ */
+  const artworks = [
+    { bg:"linear-gradient(160deg,#c8b89a,#9a8060,#5a4030)" },
+    { bg:"linear-gradient(160deg,#8aacb8,#5a7a8a,#2a4a5a)" },
+    { bg:"linear-gradient(160deg,#b09aba,#7a6a8a,#3a2a4a)" },
+    { bg:"linear-gradient(160deg,#8ab898,#5a8a68,#2a4a38)" },
+    { bg:"linear-gradient(160deg,#8a9ab8,#5a6a8a,#2a3050)" },
+    { bg:"linear-gradient(160deg,#a8c0a0,#6a9070,#2a5038)" },
+    { bg:"linear-gradient(160deg,#c09090,#8a5050,#4a2020)" },
+  ];
+
+  let current = 0;           /* 현재 중앙(active)에 표시되는 이미지 인덱스 */
+  const total = artworks.length;
+  const stage = document.getElementById('stage');
+  const dotsEl = document.getElementById('dots');
+  let isAnimating = false;   /* 전환 중 중복 입력 방지 플래그 */
+
+  /* ============================================================
+     슬라이드 DOM 및 도트 생성
+  ============================================================ */
+  artworks.forEach((art, i) => {
+    const slide = document.createElement('div');
+    slide.className = 'slide hidden'; /* 초기에는 모두 hidden */
+    slide.innerHTML = `
+      <div class="slide-inner">
+        <div style="width:100%;height:100%;background:${art.bg};"></div>
+        <div class="slide-overlay"></div>
+      </div>
+    `;
+    /* 카드 클릭 시 해당 방향으로 슬라이드 */
+    slide.addEventListener('click', () => {
+      const d = (i - current + total) % total;
+      if (d === 1 || d === 2)                  navigate('next');
+      else if (d === total-1 || d === total-2) navigate('prev');
+    });
+    stage.appendChild(slide);
+
+    /* 도트 생성 */
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dot.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(dot);
+  });
+
+  /* ============================================================
+     포지션 클래스 계산
+     current를 기준으로 각 슬라이드의 상대 위치를 반환
+
+     d = 현재 슬라이드와의 거리 (순환)
+     d=0: 중앙(active)
+     d=1: 오른쪽 1번째(next) / d=total-1: 왼쪽 1번째(prev)
+     d=2: 오른쪽 2번째(next2) / d=total-2: 왼쪽 2번째(prev2)
+     d=3: 오른쪽 화면 밖(next3) / d=total-3: 왼쪽 화면 밖(prev3)
+     나머지: 완전 숨김(hidden)
+  ============================================================ */
+  function posClass(i, cur) {
+    const d = (i - cur + total) % total;
+    if (d === 0)         return 'active';
+    if (d === 1)         return 'next';
+    if (d === total - 1) return 'prev';
+    if (d === 2)         return 'next2';
+    if (d === total - 2) return 'prev2';
+    if (d === 3)         return 'next3';  /* 오른쪽 화면 밖 대기 */
+    if (d === total - 3) return 'prev3';  /* 왼쪽 화면 밖 대기 */
+    return 'hidden';
+  }
+
+  /* ============================================================
+     슬라이더 상태 업데이트
+     hidden 카드는 transition 없이 순간이동시켜
+     화면을 가로질러 이동하는 현상을 방지
+  ============================================================ */
+  function updateSlider() {
+    const slides = Array.from(stage.querySelectorAll('.slide'));
+    slides.forEach((s, i) => {
+      const cls = posClass(i, current);
+      if (cls === 'hidden') {
+        s.style.transition = 'none'; /* ★ 순간이동: 화면 가로지름 방지 */
+      } else {
+        s.style.transition = '';     /* CSS 클래스의 transition 복원 */
+      }
+      s.className = 'slide ' + cls;
+    });
+    /* 도트 활성화 업데이트 */
+    dotsEl.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.toggle('active', i === current);
+    });
+  }
+
+  /* ============================================================
+     슬라이드 전환
+  ============================================================ */
+  function navigate(dir) {
+    if (isAnimating) return; /* 전환 중 중복 방지 */
+    isAnimating = true;
+    current = dir === 'next'
+      ? (current + 1) % total           /* 오른쪽 → 인덱스 증가 */
+      : (current - 1 + total) % total;  /* 왼쪽 → 인덱스 감소 (음수 방지) */
+    updateSlider();
+    setTimeout(() => { isAnimating = false; }, 760); /* transition 시간(0.75s)과 맞춤 */
+  }
+
+  /* 특정 인덱스로 바로 이동 (도트 클릭용) */
+  function goTo(i) {
+    if (isAnimating || i === current) return;
+    isAnimating = true;
+    current = i;
+    updateSlider();
+    setTimeout(() => { isAnimating = false; }, 760);
+  }
+
+  /* ============================================================
+     이벤트 바인딩
+  ============================================================ */
+  document.getElementById('prevBtn').addEventListener('click', () => navigate('prev'));
+  document.getElementById('nextBtn').addEventListener('click', () => navigate('next'));
+
+  /* 키보드 좌우 방향키 */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  navigate('prev');
+    if (e.key === 'ArrowRight') navigate('next');
+  });
+
+  /* 터치 스와이프 */
+  let startX = 0, mdown = false;
+  document.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', e => {
+    const d = startX - e.changedTouches[0].clientX;
+    if (Math.abs(d) > 40) navigate(d > 0 ? 'next' : 'prev'); /* 40px 이상 스와이프 */
+  });
+
+  /* 마우스 드래그 */
+  document.addEventListener('mousedown', e => { startX = e.clientX; mdown = true; });
+  document.addEventListener('mouseup', e => {
+    if (!mdown) return;
+    mdown = false;
+    const d = startX - e.clientX;
+    if (Math.abs(d) > 50) navigate(d > 0 ? 'next' : 'prev'); /* 50px 이상 드래그 */
+  });
+
+  /* 자동 재생 (4초 간격) — 클릭 시 타이머 리셋 */
+  let timer = setInterval(() => navigate('next'), 4000);
+  document.addEventListener('click', () => {
+    clearInterval(timer);
+    timer = setInterval(() => navigate('next'), 4000);
+  });
+
+  /* 초기 렌더링 */
+  updateSlider();
+</script>
+</body>
+</html>
